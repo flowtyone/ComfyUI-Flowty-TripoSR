@@ -2,7 +2,6 @@ import sys
 from os import path
 sys.path.insert(0, path.dirname(__file__))
 from folder_paths import get_filename_list, get_full_path, get_save_image_path, get_output_directory
-from comfy.model_management import get_torch_device
 from tsr.system import TSR
 from PIL import Image
 import numpy as np
@@ -30,10 +29,7 @@ class TripoSRSampler:
     def sample(self, model, reference_image, chunk_size):
         outputs = []
 
-        device = get_torch_device()
-
-        if not torch.cuda.is_available():
-            device = "cpu"
+        device = "cpu"
 
         if not self.initialized_model:
             print("Loading TripoSR model")
