@@ -3,7 +3,7 @@ from typing import Callable, Optional, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
-from torchmcubes import marching_cubes
+from skimage import measure
 
 
 class IsosurfaceHelper(nn.Module):
@@ -18,7 +18,7 @@ class MarchingCubeHelper(IsosurfaceHelper):
     def __init__(self, resolution: int) -> None:
         super().__init__()
         self.resolution = resolution
-        self.mc_func: Callable = marching_cubes
+        #self.mc_func: Callable = marching_cubes
         self._grid_vertices: Optional[torch.FloatTensor] = None
 
     @property
@@ -42,7 +42,9 @@ class MarchingCubeHelper(IsosurfaceHelper):
         level: torch.FloatTensor,
     ) -> Tuple[torch.FloatTensor, torch.LongTensor]:
         level = -level.view(self.resolution, self.resolution, self.resolution)
-        v_pos, t_pos_idx = self.mc_func(level.detach(), 0.0)
+        v_pos, t_pos_idx, _, __ = measure.marching_cubes(level.detach().numpy(), 0.0) #self.mc_func(level.detach(), 0.0)
+        v_pos = torch.from_numpy(v_pos.copy()).type(torch.FloatTensor)
+        t_pos_idx = torch.from_numpy(t_pos_idx.copy()).type(torch.LongTensor)
         v_pos = v_pos[..., [2, 1, 0]]
         v_pos = v_pos / (self.resolution - 1.0)
         return v_pos, t_pos_idx
