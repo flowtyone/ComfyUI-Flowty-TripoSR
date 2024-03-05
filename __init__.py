@@ -4,13 +4,16 @@ sys.path.insert(0, path.dirname(__file__))
 from folder_paths import get_filename_list, get_full_path, get_save_image_path, get_output_directory
 from comfy.model_management import get_torch_device
 from tsr.system import TSR
+from tsr.utils import remove_background, resize_foreground
 from PIL import Image
 import numpy as np
 import torch
 
 
-def fill_background(pli_image):
-    image = pli_image
+rembg_session = rembg.new_session()
+
+def fill_background(image):
+    image = np.array(image).astype(np.float32) / 255.0
     image = image[:, :, :3] * image[:, :, 3:4] + (1 - image[:, :, 3:4]) * 0.5
     image = Image.fromarray((image * 255.0).astype(np.uint8))
     return image
@@ -27,7 +30,9 @@ class TripoSRSampler:
             "required": {
                 "model": (get_filename_list("checkpoints"),),
                 "reference_image": ("IMAGE",),
-                "chunk_size": ("INT", {"default": 8192, "min": 1, "max": 10000})
+                "chunk_size": ("INT", {"default": 8192, "min": 1, "max": 10000}),
+                "remove_background": ("BOOLEAN", {"default": True}),
+                "foreground_ratio": ("FLOAT", {"default": 0.85, "min": 0, "max": 1.0, "step": 0.01}),
             }
         }
 
@@ -35,7 +40,7 @@ class TripoSRSampler:
     FUNCTION = "sample"
     CATEGORY = "Flowty TripoSR"
 
-    def sample(self, model, reference_image, chunk_size):
+    def sample(self, model, reference_image, chunk_size, remove_background, foreground_ratio):
         outputs = []
 
         device = get_torch_device()
@@ -56,8 +61,15 @@ class TripoSRSampler:
             for image in reference_image:
                 i = 255. * image.cpu().numpy()
                 i = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
-                if i.mode == 'RGBA':
+                if remove_background:
+                    i = i.convert("RGB")
+                    i = remove_background(i, rembg_session)
+                    i = resize_foreground(i, foreground_ratio)
                     i = fill_background(i)
+                else:
+                    i = i
+                    if i.mode == "RGBA":
+                        i = fill_background(i)
                 scene_codes = self.initialized_model([i], device)
                 meshes = self.initialized_model.extract_mesh(scene_codes)
                 outputs.append(meshes[0])
