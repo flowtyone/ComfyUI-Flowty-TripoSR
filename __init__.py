@@ -46,10 +46,7 @@ class TripoSRSampler:
 
         with torch.no_grad():
             for image in reference_image:
-                i = 255. * image.cpu().numpy()
-                i = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
-                if i.mode == 'RGBA':
-                    i = i.convert('RGB')
+                i = Image.fromarray(np.clip(255. * image.cpu().numpy().squeeze(), 0, 255).astype(np.uint8))
                 scene_codes = self.initialized_model([i], device)
                 meshes = self.initialized_model.extract_mesh(scene_codes)
                 outputs.append(meshes[0])
