@@ -8,6 +8,7 @@ from tsr.utils import remove_background, resize_foreground
 from PIL import Image
 import numpy as np
 import torch
+import rembg
 
 
 rembg_session = rembg.new_session()
