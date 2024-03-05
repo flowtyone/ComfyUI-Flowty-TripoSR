@@ -8,6 +8,14 @@ from PIL import Image
 import numpy as np
 import torch
 
+
+def fill_background(pli_image):
+    image = pli_image
+    image = image[:, :, :3] * image[:, :, 3:4] + (1 - image[:, :, 3:4]) * 0.5
+    image = Image.fromarray((image * 255.0).astype(np.uint8))
+    return image
+
+
 class TripoSRSampler:
 
     def __init__(self):
@@ -46,7 +54,10 @@ class TripoSRSampler:
 
         with torch.no_grad():
             for image in reference_image:
-                i = Image.fromarray(np.clip(255. * image.cpu().numpy().squeeze(), 0, 255).astype(np.uint8))
+                i = 255. * image.cpu().numpy()
+                i = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
+                if i.mode == 'RGBA':
+                    i = fill_background(i)
                 scene_codes = self.initialized_model([i], device)
                 meshes = self.initialized_model.extract_mesh(scene_codes)
                 outputs.append(meshes[0])
