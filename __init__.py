@@ -32,7 +32,7 @@ class TripoSRSampler:
                 "model": (get_filename_list("checkpoints"),),
                 "reference_image": ("IMAGE",),
                 "chunk_size": ("INT", {"default": 8192, "min": 1, "max": 10000}),
-                "remove_background": ("BOOLEAN", {"default": True}),
+                "do_remove_background": ("BOOLEAN", {"default": True}),
                 "foreground_ratio": ("FLOAT", {"default": 0.85, "min": 0, "max": 1.0, "step": 0.01}),
             }
         }
@@ -41,7 +41,7 @@ class TripoSRSampler:
     FUNCTION = "sample"
     CATEGORY = "Flowty TripoSR"
 
-    def sample(self, model, reference_image, chunk_size, remove_background, foreground_ratio):
+    def sample(self, model, reference_image, chunk_size, do_remove_background, foreground_ratio):
         outputs = []
 
         device = get_torch_device()
@@ -62,7 +62,7 @@ class TripoSRSampler:
             for image in reference_image:
                 i = 255. * image.cpu().numpy()
                 i = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
-                if remove_background:
+                if do_remove_background:
                     i = i.convert("RGB")
                     i = remove_background(i, rembg_session)
                     i = resize_foreground(i, foreground_ratio)
