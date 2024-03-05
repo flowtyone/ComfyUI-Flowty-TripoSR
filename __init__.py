@@ -83,7 +83,8 @@ class TripoSRViewer:
             single_mesh.export(path.join(full_output_folder, file))
             saved.append({
                 "filename": file,
-                "type": "output"
+                "type": "output",
+                "subfolder": subfolder
             })
 
         return {"ui": {"mesh": saved}}
