@@ -42,14 +42,9 @@ class MarchingCubeHelper(IsosurfaceHelper):
         level: torch.FloatTensor,
     ) -> Tuple[torch.FloatTensor, torch.LongTensor]:
         level = -level.view(self.resolution, self.resolution, self.resolution)
-        level = level.detach()
-
-        if level.is_cuda:
-            level = level.cpu()
-
-        v_pos, t_pos_idx, _, __ = measure.marching_cubes(level.numpy(), 0.0) #self.mc_func(level.detach(), 0.0)
-        v_pos = torch.from_numpy(v_pos.copy()).type(torch.FloatTensor)
-        t_pos_idx = torch.from_numpy(t_pos_idx.copy()).type(torch.LongTensor)
+        v_pos, t_pos_idx, _, __ = measure.marching_cubes((level.detach().cpu() if level.is_cuda else level.detach()).numpy(), 0.0) #self.mc_func(level.detach(), 0.0)
+        v_pos = torch.from_numpy(v_pos.copy()).type(torch.FloatTensor).to(level.device)
+        t_pos_idx = torch.from_numpy(t_pos_idx.copy()).type(torch.LongTensor).to(level.device)
         v_pos = v_pos[..., [0, 1, 2]]
         t_pos_idx = t_pos_idx[..., [1, 0, 2]]
         v_pos = v_pos / (self.resolution - 1.0)
