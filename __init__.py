@@ -1,5 +1,6 @@
 import sys
 from os import path
+
 sys.path.insert(0, path.dirname(__file__))
 from folder_paths import get_filename_list, get_full_path, get_save_image_path, get_output_directory
 from comfy.model_management import get_torch_device
@@ -8,8 +9,15 @@ from PIL import Image
 import numpy as np
 import torch
 
-class TripoSRSampler:
 
+def fill_background(image):
+    image = np.array(image).astype(np.float32) / 255.0
+    image = image[:, :, :3] * image[:, :, 3:4] + (1 - image[:, :, 3:4]) * 0.5
+    image = Image.fromarray((image * 255.0).astype(np.uint8))
+    return image
+
+
+class TripoSRModelLoader:
     def __init__(self):
         self.initialized_model = None
 
@@ -18,18 +26,15 @@ class TripoSRSampler:
         return {
             "required": {
                 "model": (get_filename_list("checkpoints"),),
-                "reference_image": ("IMAGE",),
                 "chunk_size": ("INT", {"default": 8192, "min": 1, "max": 10000})
             }
         }
 
-    RETURN_TYPES = ("MESH",)
-    FUNCTION = "sample"
+    RETURN_TYPES = ("TRIPOSR_MODEL",)
+    FUNCTION = "load"
     CATEGORY = "Flowty TripoSR"
 
-    def sample(self, model, reference_image, chunk_size):
-        outputs = []
-
+    def load(self, model, chunk_size):
         device = get_torch_device()
 
         if not torch.cuda.is_available():
@@ -44,17 +49,53 @@ class TripoSRSampler:
             self.initialized_model.renderer.set_chunk_size(chunk_size)
             self.initialized_model.to(device)
 
-        with torch.no_grad():
-            for image in reference_image:
-                i = 255. * image.cpu().numpy()
-                i = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
-                if i.mode == 'RGBA':
-                    i = i.convert('RGB')
-                scene_codes = self.initialized_model([i], device)
-                meshes = self.initialized_model.extract_mesh(scene_codes)
-                outputs.append(meshes[0])
+        return (self.initialized_model,)
 
-        return (outputs,)
+
+class TripoSRSampler:
+
+    def __init__(self):
+        self.initialized_model = None
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "model": ("TRIPOSR_MODEL",),
+                "reference_image": ("IMAGE",),
+                "geometry_resolution": ("INT", {"default": 256, "min": 128, "max": 12288}),
+                "threshold": ("FLOAT", {"default": 25.0, "min": 0.0, "step": 0.01}),
+            },
+            "optional": {
+                "reference_mask": ("MASK",)
+            }
+        }
+
+    RETURN_TYPES = ("MESH",)
+    FUNCTION = "sample"
+    CATEGORY = "Flowty TripoSR"
+
+    def sample(self, model, reference_image, geometry_resolution, threshold, reference_mask=None):
+        device = get_torch_device()
+
+        if not torch.cuda.is_available():
+            device = "cpu"
+
+        image = reference_image[0]
+
+        if reference_mask is not None:
+            mask = reference_mask[0].unsqueeze(2)
+            image = torch.cat((image, mask), dim=2).detach().cpu().numpy()
+        else:
+            image = image.detach().cpu().numpy()
+
+        image = Image.fromarray(np.clip(255. * image, 0, 255).astype(np.uint8))
+        if reference_mask is not None:
+            image = fill_background(image)
+        image = image.convert('RGB')
+        scene_codes = model([image], device)
+        meshes = model.extract_mesh(scene_codes, resolution=geometry_resolution, threshold=threshold)
+        return ([meshes[0]],)
 
 
 class TripoSRViewer:
@@ -91,15 +132,16 @@ class TripoSRViewer:
 
 
 NODE_CLASS_MAPPINGS = {
+    "TripoSRModelLoader": TripoSRModelLoader,
     "TripoSRSampler": TripoSRSampler,
     "TripoSRViewer": TripoSRViewer
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
+    "TripoSRModelLoader": "TripoSR Model Loader",
     "TripoSRSampler": "TripoSR Sampler",
     "TripoSRViewer": "TripoSR Viewer"
 }
-
 
 WEB_DIRECTORY = "./web"
 
