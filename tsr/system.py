@@ -22,6 +22,7 @@ from .utils import (
     scale_tensor,
 )
 
+from .config import MODEL_CACHE_PATH
 
 class TSR(BaseModule):
     @dataclass
@@ -57,10 +58,11 @@ class TSR(BaseModule):
             weight_path = os.path.join(pretrained_model_name_or_path, weight_name)
         else:
             config_path = hf_hub_download(
-                repo_id=pretrained_model_name_or_path, filename=config_name
+                repo_id=pretrained_model_name_or_path, filename=config_name, local_dir=MODEL_CACHE_PATH
             )
             weight_path = hf_hub_download(
-                repo_id=pretrained_model_name_or_path, filename=weight_name
+                repo_id=pretrained_model_name_or_path, filename=weight_name,
+                local_dir=MODEL_CACHE_PATH
             )
 
         cfg = OmegaConf.load(config_path)
