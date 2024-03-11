@@ -7,6 +7,7 @@ from huggingface_hub import hf_hub_download
 from transformers.models.vit.modeling_vit import ViTModel
 
 from ...utils import BaseModule
+from ...custom_cache import MODEL_CACHE_PATH, custom_hf_download
 
 
 class DINOSingleImageTokenizer(BaseModule):
@@ -20,9 +21,10 @@ class DINOSingleImageTokenizer(BaseModule):
     def configure(self) -> None:
         self.model: ViTModel = ViTModel(
             ViTModel.config_class.from_pretrained(
-                hf_hub_download(
+                custom_hf_download(
                     repo_id=self.cfg.pretrained_model_name_or_path,
                     filename="config.json",
+                    cache_dir=MODEL_CACHE_PATH,
                 )
             )
         )

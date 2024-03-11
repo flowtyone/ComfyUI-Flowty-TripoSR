@@ -21,6 +21,7 @@ from .utils import (
     get_spherical_cameras,
     scale_tensor,
 )
+from .custom_cache import MODEL_CACHE_PATH, custom_hf_download
 
 
 class TSR(BaseModule):
@@ -56,11 +57,12 @@ class TSR(BaseModule):
             config_path = os.path.join(pretrained_model_name_or_path, config_name)
             weight_path = os.path.join(pretrained_model_name_or_path, weight_name)
         else:
-            config_path = hf_hub_download(
-                repo_id=pretrained_model_name_or_path, filename=config_name
+            config_path = custom_hf_download(
+                repo_id=pretrained_model_name_or_path, filename=config_name, cache_dir=MODEL_CACHE_PATH,
             )
-            weight_path = hf_hub_download(
-                repo_id=pretrained_model_name_or_path, filename=weight_name
+            weight_path = custom_hf_download(
+                repo_id=pretrained_model_name_or_path, filename=weight_name,
+                cache_dir=MODEL_CACHE_PATH,
             )
 
         cfg = OmegaConf.load(config_path)
