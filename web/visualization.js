@@ -9,7 +9,7 @@ class Visualizer {
             scrolling: "no",
             overflow: "hidden",
         })
-        this.iframe.src = "/extensions/ComfyUI-Flowty-TripoSR/html/" + visualSrc + ".html"
+        this.iframe.src = "./extensions/ComfyUI-Flowty-TripoSR/html/" + visualSrc + ".html"
         container.appendChild(this.iframe)
     }
 
